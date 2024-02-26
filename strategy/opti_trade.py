@@ -1,8 +1,11 @@
+import sys
+import os
 import argparse
 import asyncio
 import math
-from base_app import MessageType
-from strategy import Strategy
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from core.base_app import MessageType
+from core.strategy import Strategy
 
 class OptiTrade(Strategy):
     def __init__(self, config_file):
@@ -16,7 +19,6 @@ class OptiTrade(Strategy):
         self.order_side = self.config['OptiTrade']['order_side'].lower()
         self.exec_mode = self.config['OptiTrade'].get('exec_mode', 'MID')  # Default to 'MID' if not specified
         self.sequence_number = 0
-        self.user_channel = f'user.order.{self.symbol}'
         self.order_book = None
         self.last_order_time = None
         self.open_orders = {}

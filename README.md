@@ -43,15 +43,14 @@ Before setting up the trading system, ensure that you have Miniconda and PM2 ins
    mkdir -p /tmp/sequencer
    ```
 
-2. Configure the `cdc_execution_config.ini` file with your API key and secret from the cryptocurrency exchange:
+2. Set up your environment variables for the API key and secret used by the cryptocurrency exchange. Export them in your shell:
    ```
-   [Exchange]
-   api_key = YOUR_API_KEY
-   secret = YOUR_SECRET
+   export CDC_API_KEY=your_api_key
+   export CDC_SECRET=your_secret
    ```
-   Replace `YOUR_API_KEY` and `YOUR_SECRET` with your actual API key and secret.
+   Replace `your_api_key` and `your_secret` with your actual API key and secret values.
 
-3. Configure the `opti_trade_config.ini` file with the desired strategy parameters:
+3. Configure the `conf/opti_trade_config.ini` file with the desired strategy parameters:
    ```
    [OptiTrade]
    exchange = cryptocom
@@ -86,7 +85,8 @@ To stop the system, use:
 
 ## Contributing
 
-Please note that this repository is read-only and does not accept contributions.
+Contributions are welcome! If you have a suggestion that would improve this, please fork the repository and create a pull request. You can also simply open an issue with the tag "enhancement".
+Don't forget to give the project a star! Thanks again!
 
 ## License
 

@@ -1,9 +1,11 @@
 import argparse
+import os
 import asyncio
 import ccxt.pro as ccxtpro
 from base_app import BaseApp, MessageType
 from ccxt.base.types import Order, Trade
 from typing import List
+from dotenv import load_dotenv
 
 class ExecutionGateway(BaseApp):
     def __init__(self, config_file):
@@ -12,8 +14,9 @@ class ExecutionGateway(BaseApp):
         self.exchange_params = {
             k[6:]: v for k, v in self.config['Exchange'].items() if k.startswith('param_')
         }
-        self.exchange_params['apiKey'] = self.config['Exchange']['api_key']
-        self.exchange_params['secret'] = self.config['Exchange']['secret']
+        load_dotenv()
+        self.exchange_params['apiKey'] = os.environ.get(self.config['Exchange']['api_key_env'])
+        self.exchange_params['secret'] = os.environ.get(self.config['Exchange']['secret_env'])
 
     def post_start(self):
         exchange_class = getattr(ccxtpro, self.exchange_id)

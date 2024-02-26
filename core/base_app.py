@@ -40,11 +40,9 @@ class BaseApp(ABC):
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
-    @final
     def _should_publish(self):
         return True
 
-    @final
     def _should_subscribe(self):
         return True
 

@@ -1,4 +1,4 @@
-from base_app import BaseApp, MessageType
+from core.base_app import BaseApp, MessageType
 
 class Strategy(BaseApp):
     async def send_order(self, exchange, symbol, order_side, price, quantity, client_order_id, order_type='limit', post_only=True):
