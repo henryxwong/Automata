@@ -2,14 +2,17 @@ import argparse
 import os
 import asyncio
 import ccxt.pro as ccxtpro
-from base_app import BaseApp, MessageType
+from proxy_app import ProxyApp
+from base_app import MessageType
 from ccxt.base.types import Order, Trade
 from typing import List
 from dotenv import load_dotenv
 
-class ExecutionGateway(BaseApp):
+
+class ExecutionGateway(ProxyApp):
     def __init__(self, config_file):
         super().__init__(config_file)
+        self.exchange = None
         self.exchange_id = self.config['Exchange']['id']
         self.exchange_params = {
             k[6:]: v for k, v in self.config['Exchange'].items() if k.startswith('param_')
@@ -18,7 +21,8 @@ class ExecutionGateway(BaseApp):
         self.exchange_params['apiKey'] = os.environ.get(self.config['Exchange']['api_key_env'])
         self.exchange_params['secret'] = os.environ.get(self.config['Exchange']['secret_env'])
 
-    def post_start(self):
+    async def post_start(self):
+        await super().post_start()
         exchange_class = getattr(ccxtpro, self.exchange_id)
         self.exchange: ccxtpro.Exchange = exchange_class(self.exchange_params)
         task1 = asyncio.create_task(self.handle_message())
@@ -27,6 +31,7 @@ class ExecutionGateway(BaseApp):
         self.tasks.update({task1, task2, task3})
 
     async def pre_stop(self):
+        await super().pre_stop()
         await self.exchange.close()
 
     async def handle_message(self):
@@ -78,6 +83,7 @@ class ExecutionGateway(BaseApp):
                     'data': trade
                 }
                 await self.send(message)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the ExecutionGateway app with the specified configuration")

@@ -66,11 +66,11 @@ Before setting up the trading system, ensure that you have Miniconda and PM2 ins
 
 ## Running the System
 
-To run the trading system, use PM2, a process manager for Node.js applications with a built-in load balancer. The `automata.config.js` file in the repository is configured to start the various components of the system.
+To run the trading system, use PM2, a process manager for Node.js applications with a built-in load balancer. The `demo.config.js` file in the repository is configured to start the various components of the system.
 
 Start the system using the following command:
    ```
-   pm2 start automata.config.js
+   pm2 start demo.config.js
    ```
 
 You can monitor the processes with:
@@ -80,7 +80,7 @@ You can monitor the processes with:
 
 To stop the system, use:
    ```
-   pm2 stop automata.config.js
+   pm2 stop demo.config.js
    ```
 
 ## Contributing

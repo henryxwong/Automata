@@ -3,20 +3,19 @@ import asyncio
 import ccxt.pro as ccxtpro
 from base_app import BaseApp, MessageType
 
+
 class MarketDataGateway(BaseApp):
     def __init__(self, config_file):
         super().__init__(config_file)
+        self.exchange = None
         self.exchange_id = self.config['Exchange']['id']
-        self.symbols = self.config['Exchange']['symbols'].split(', ')
+        self.symbols = [symbol.strip() for symbol in self.config['Exchange']['symbols'].split(',')]
         self.limit = int(self.config['Exchange'].get('limit', 10))
         self.exchange_params = {
             k[6:]: v for k, v in self.config['Exchange'].items() if k.startswith('param_')
         }
 
-    def _should_subscribe(self):
-        return False
-
-    def post_start(self):
+    async def post_start(self):
         exchange_class = getattr(ccxtpro, self.exchange_id)
         self.exchange: ccxtpro.Exchange = exchange_class(self.exchange_params)
         task1 = asyncio.create_task(self.send_order_book())
@@ -37,6 +36,7 @@ class MarketDataGateway(BaseApp):
                     'data': order_book
                 }
                 await self.send(message)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the MarketDataGateway app with specified configuration")

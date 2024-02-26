@@ -2,7 +2,7 @@ module.exports = {
   apps : [
     {
       name: 'Sequencer',
-      script: 'core/sequencer_app.py',
+      script: 'core/sequencer.py',
       args: '--config conf/sequencer_config.ini',
       interpreter: 'python',
       watch: false
