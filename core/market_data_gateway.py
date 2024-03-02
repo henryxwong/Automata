@@ -27,7 +27,11 @@ class MarketDataGateway(BaseApp):
     async def send_order_book(self):
         while not self.shutdown_event.is_set():
             for symbol in self.symbols:
-                order_book = await self.exchange.watch_order_book(symbol, self.limit)
+                try:
+                    order_book = await self.exchange.watch_order_book(symbol, self.limit)
+                except Exception as e:
+                    self.logger.error(f"{self.app_name} - Error watching order book for {symbol}: {e}")
+                    continue
                 self.logger.debug(f"{self.app_name} - Sending order book for {symbol}: {order_book}")
                 message = {
                     'msg_type': MessageType.ORDER_BOOK.value,

@@ -1,5 +1,6 @@
 import gzip
 import json
+import os
 from datetime import datetime
 
 
@@ -9,17 +10,26 @@ class DailyGzipJsonWriter:
         self.base_filename = base_filename
         self.current_file_date = None
         self.file = None
+        self.current_filename = None
 
     def _get_filename(self, dt):
         date_str = dt.strftime("%Y-%m-%d")
-        return f"{self.base_path}/{self.base_filename}_{date_str}.json.gz"
+        return f"{self.base_path}/{self.base_filename}_{date_str}.json"
+
+    def _gzip_file(self, filename):
+        with open(filename, 'rb') as f_in:
+            with gzip.open(f"{filename}.gz", 'wb') as f_out:
+                f_out.writelines(f_in)
+        os.remove(filename)
 
     def _open_new_file(self, dt):
         if self.file is not None:
             self.file.close()
+            self._gzip_file(self.current_filename)
         filename = self._get_filename(dt)
-        self.file = gzip.open(filename, 'at', encoding='utf-8')
+        self.file = open(filename, 'a', encoding='utf-8')
         self.current_file_date = dt.date()
+        self.current_filename = filename
 
     def write(self, data_dict):
         msg_time_ns = data_dict.get("msg_time")

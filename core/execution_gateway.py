@@ -60,7 +60,11 @@ class ExecutionGateway(ProxyApp):
 
     async def send_order_updates(self):
         while not self.shutdown_event.is_set():
-            orders: List[Order] = await self.exchange.watch_orders()
+            try:
+                orders: List[Order] = await self.exchange.watch_orders()
+            except Exception as e:
+                self.logger.error(f"{self.app_name} - Error watching orders: {e}")
+                continue
             for order in orders:
                 self.logger.info(f"{self.app_name} - sending order update for {order['id']}")
                 message = {
@@ -73,7 +77,11 @@ class ExecutionGateway(ProxyApp):
 
     async def send_trade_executions(self):
         while not self.shutdown_event.is_set():
-            trades: List[Trade] = await self.exchange.watch_my_trades()
+            try:
+                trades: List[Trade] = await self.exchange.watch_my_trades()
+            except Exception as e:
+                self.logger.error(f"{self.app_name} - Error watching trades: {e}")
+                continue
             for trade in trades:
                 self.logger.info(f"{self.app_name} - sending trade execution for {trade['id']}")
                 message = {
