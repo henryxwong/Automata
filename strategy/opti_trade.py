@@ -1,6 +1,5 @@
 import argparse
 import asyncio
-import math
 import os
 import sys
 
@@ -14,11 +13,10 @@ class OptiTrade(Strategy):
         super().__init__(config_file)
         self.exchange = self.config['OptiTrade']['exchange']
         self.symbol = self.config['OptiTrade']['symbol']
-        self.tick_size = float(self.config['OptiTrade']['tick_size'])
         self.order_quantity = int(self.config['OptiTrade']['order_quantity'])
         self.sleep_time = int(self.config['OptiTrade']['sleep_time_sec']) * 1_000_000_000
         self.client_order_id_prefix = self.config['OptiTrade']['client_order_id_prefix']
-        self.order_side = self.config['OptiTrade']['order_side'].lower()
+        self.order_side = self.config['OptiTrade']['order_side'].upper()
         self.exec_mode = self.config['OptiTrade'].get('exec_mode', 'MID')  # Default to 'MID' if not specified
         self.limit_price = float(self.config['OptiTrade'].get('limit_price', 0.0))
         self.sequence_number = 0
@@ -30,35 +28,38 @@ class OptiTrade(Strategy):
 
     def handle_request(self, request):
         try:
-            if request.get('exchange') == self.exchange and request.get('symbol') == self.symbol:
+            if request.get('exchange') == self.exchange:
                 if request['msg_type'] == MessageType.ORDER_BOOK.value:
-                    self.order_book = request['data']
-                    self.manage_orders()
+                    if request.get('symbol') == self.symbol:
+                        self.order_book = request['data']
+                        self.manage_orders()
                 elif request['msg_type'] == MessageType.ORDER_UPDATE.value:
                     order = request['data']
                     client_order_id = order['clientOrderId']
-                    if order['status'] == 'open':
-                        # Add or update the order in the open_orders dict
-                        self.open_orders[client_order_id] = order
-                    elif order['status'] in ['closed', 'canceled', 'expired', 'rejected']:
-                        # Remove the order from open_orders
-                        if client_order_id in self.open_orders:
-                            del self.open_orders[client_order_id]
-                        # Remove from pending_cancel if it's confirmed by the exchange
-                        if client_order_id in self.pending_cancel:
-                            self.pending_cancel.discard(client_order_id)
-                            self.logger.info(f"Order {client_order_id} removed from pending_cancel.")
+                    if client_order_id.startswith(self.client_order_id_prefix):
+                        if order['status'] == 'open':
+                            # Add or update the order in the open_orders dict
+                            self.open_orders[client_order_id] = order
+                        elif order['status'] in ['closed', 'canceled', 'expired', 'rejected']:
+                            # Remove the order from open_orders
+                            if client_order_id in self.open_orders:
+                                del self.open_orders[client_order_id]
+                            # Remove from pending_cancel if it's confirmed by the exchange
+                            if client_order_id in self.pending_cancel:
+                                self.pending_cancel.discard(client_order_id)
+                                self.logger.info(f"Order {client_order_id} removed from pending_cancel.")
 
-                    # Remove from pending_new if it's confirmed by the exchange
-                    if client_order_id in self.pending_new:
-                        self.pending_new.discard(client_order_id)
-                        self.logger.info(f"Order {client_order_id} removed from pending_new.")
+                        # Remove from pending_new if it's confirmed by the exchange
+                        if client_order_id in self.pending_new:
+                            self.pending_new.discard(client_order_id)
+                            self.logger.info(f"Order {client_order_id} removed from pending_new.")
                 elif request['msg_type'] == MessageType.CREATE_ORDER_REJECT.value:
                     order = request['data']
                     client_order_id = order['params']['clientOrderId']
-                    if client_order_id in self.pending_new:
-                        self.pending_new.discard(client_order_id)
-                        self.logger.info(f"Order {client_order_id} removed from pending_new due to rejection.")
+                    if client_order_id.startswith(self.client_order_id_prefix):
+                        if client_order_id in self.pending_new:
+                            self.pending_new.discard(client_order_id)
+                            self.logger.info(f"Order {client_order_id} removed from pending_new due to rejection.")
 
         except Exception as e:
             self.logger.error(f"Failed to handle message: {e}", exc_info=True)
@@ -82,11 +83,11 @@ class OptiTrade(Strategy):
             # Cancel the last order if it exists and is not at the top of the book
             if len(filtered_sorted_orders) > 0:
                 last_order_price = filtered_sorted_orders[-1]['price']
-                if self.order_side == 'sell':
+                if self.order_side == 'SELL':
                     target_price = self.order_book['asks'][0][0] if self.order_book['asks'] else None
                     if self.limit_price > 0:
                         target_price = max(target_price, self.limit_price)
-                elif self.order_side == 'buy':
+                elif self.order_side == 'BUY':
                     target_price = self.order_book['bids'][0][0] if self.order_book['bids'] else None
                     if self.limit_price > 0:
                         target_price = min(target_price, self.limit_price)
@@ -114,8 +115,7 @@ class OptiTrade(Strategy):
             # Add to pending_cancel list
             self.pending_cancel.add(client_order_id)
             self.logger.info(f"Order {client_order_id} added to pending_cancel and cancellation request is being sent.")
-            self.cancel_order(self.exchange, self.symbol, self.open_orders[client_order_id]['id'],
-                              client_order_id)
+            self.cancel_order(self.exchange, self.symbol, client_order_id)
             self.logger.info(f"Order {client_order_id} cancellation request sent.")
         except Exception as e:
             self.logger.error(f"Failed to send cancellation for order {client_order_id}: {e}", exc_info=True)
@@ -131,12 +131,12 @@ class OptiTrade(Strategy):
         # Determine price based on execution mode
         if self.exec_mode == 'TOB':
             # Use top of book price for sell side
-            if self.order_side == 'sell' and self.order_book and self.order_book['asks']:
+            if self.order_side == 'SELL' and self.order_book and self.order_book['asks']:
                 price = float(self.order_book['asks'][0][0])
                 # Floor the sell price at limit_price if it's set
                 if self.limit_price > 0:
                     price = max(price, self.limit_price)
-            elif self.order_side == 'buy' and self.order_book and self.order_book['bids']:
+            elif self.order_side == 'BUY' and self.order_book and self.order_book['bids']:
                 price = float(self.order_book['bids'][0][0])
                 # Cap the buy price at limit_price if it's set
                 if self.limit_price > 0:
@@ -149,16 +149,11 @@ class OptiTrade(Strategy):
             best_ask = float(self.order_book['asks'][0][0]) if self.order_book and self.order_book['asks'] else None
             if best_bid and best_ask:
                 price = (best_bid + best_ask) / 2
-                mid_price = (best_bid + best_ask) / 2
-                if self.order_side == 'sell':
-                    # Round up to the nearest tick size for sell orders
-                    price = math.ceil(mid_price / self.tick_size) * self.tick_size
+                if self.order_side == 'SELL':
                     # Floor the sell price at limit_price if it's set
                     if self.limit_price > 0:
                         price = max(price, self.limit_price)
-                elif self.order_side == 'buy':
-                    # Round down to the nearest tick size for buy orders
-                    price = math.floor(mid_price / self.tick_size) * self.tick_size
+                elif self.order_side == 'BUY':
                     # Cap the buy price at limit_price if it's set
                     if self.limit_price > 0:
                         price = min(price, self.limit_price)
@@ -178,8 +173,8 @@ class OptiTrade(Strategy):
             self.logger.info(
                 f"Order {client_order_id} added to pending_new and a new {self.order_side} order placement request is "
                 f"being sent at price: {price}")
-            self.send_order(self.exchange, self.symbol, self.order_side, price, self.order_quantity,
-                            client_order_id)
+            self.create_order(self.exchange, self.symbol, self.order_side, price, self.order_quantity,
+                              client_order_id)
             self.logger.info(f"New {self.order_side} order {client_order_id} placement request sent at price: {price}")
         except Exception as e:
             self.logger.error(f"Failed to place new {self.order_side} order {client_order_id} at price {price}: {e}",

@@ -57,18 +57,18 @@ class Strategy(BaseApp, ABC):
             self.rep_socket = None
             self.logger.info(f"REP socket for connection_id: {self.connection_id} has been closed.")
 
-    def send_order(self, exchange, symbol, order_side, price, quantity, client_order_id, order_type='limit',
-                         post_only=True):
+    def create_order(self, exchange, symbol, order_side, price, quantity, client_order_id, order_type='limit',
+                     post_only=True):
         message = {
             'msg_type': MessageType.CREATE_ORDER.value,
             'exchange': exchange,
             'symbol': symbol,
             'data': {
                 'symbol': symbol,
-                'type': order_type,
                 'side': order_side,
-                'amount': quantity,
+                'type': order_type,
                 'price': price,
+                'amount': quantity,
                 'params': {
                     'client_oid': client_order_id,  # ccxt doesn't map it correctly
                     'clientOrderId': client_order_id,
@@ -78,7 +78,7 @@ class Strategy(BaseApp, ABC):
         }
         self.replies.append(message)
 
-    def cancel_order(self, exchange, symbol, order_id, client_order_id):
+    def cancel_order(self, exchange, symbol, client_order_id, order_id=0):
         message = {
             'msg_type': MessageType.CANCEL_ORDER.value,
             'exchange': exchange,

@@ -31,8 +31,8 @@ class ExecutionGateway(ProxyApp):
         self.tasks.update({task1, task2, task3})
 
     async def pre_stop(self):
-        await super().pre_stop()
         await self.exchange.close()
+        await super().pre_stop()
 
     async def handle_message(self):
         while not self.shutdown_event.is_set():

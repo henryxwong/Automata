@@ -22,8 +22,8 @@ class MessageLogger(ProxyApp):
         self.tasks.update({task1})
 
     async def pre_stop(self):
-        await super().pre_stop()
         self.writer.close()
+        await super().pre_stop()
 
     async def receive_and_log(self):
         try:
